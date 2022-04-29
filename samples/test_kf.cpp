@@ -19,8 +19,11 @@ int main(int argc, char** argv)
      * it with Matlab. Use: plot_data1.m to plot the results.
      */
     ofstream log_file;
+    ofstream meas_file;
+    ifstream meas;
 #ifdef _WIN32
     log_file.open("..\\bin\\log_file_test.txt");
+    meas_file.open("..\\bin\\meas_test_kf.txt");
 #else
     log_file.open("log_file1.txt");
 #endif
@@ -28,36 +31,67 @@ int main(int argc, char** argv)
     /*
      * Define the system
      */
-    mat A(1,1), B(1,1), H(1,1), Q(1,1), R(1,1);
-    colvec u(1);
-    colvec x0(1);
-/*
-    A << 0;
-    B << 1;
-    Q << 2*2;
-    H << 1;
-    R << 2*2;
-    u << 12.0;
-*/
-    A = {0};
-    B = {1};
-    Q = {2*2};
-    H = {1};
-    R = {2*2};
-    u = {12.0};
+    mat A(5,5), B(5,1,fill::zeros), H(2,5), Q(5,5), R(2,2);
     
+    // State transition matrix
+    A << 1 << 0 << 1 << 0 << 0 << endr
+      << 0 << 1 << 0 << 1 << 0 << endr
+      << 0 << 0 << 1 << 0 << 0 << endr
+      << 0 << 0 << 0 << 1 << 0 << endr
+      << 0 << 0 << 0 << 0 << 0 << endr;
+    
+    // Measurement matrix
+    H << 1 << 0 << 0 << 0 << 0 << endr
+      << 0 << 1 << 0 << 0 << 0 << endr;
+    
+    // Process noise
+    Q << (1/3.0) <<       0 << (1/2.0) <<       0 << 0 << endr
+      <<       0 << (1/3.0) <<       0 << (1/2.0) << 0 << endr
+      << (1/2.0) <<       0 <<       1 <<       0 << 0 << endr
+      <<       0 << (1/2.0) <<       0 <<       1 << 0 << endr
+      <<       0 <<       0 <<       0 <<       0 << 0 << endr;
+      
+    // Measusrement noise
+    R = 10 * R.eye();
+    
+    // Initial state
+    colvec x0(5);
+    x0 << 0 << 0 << 1 << 1 << 0;
+
+    // Control vector
+    colvec u(1);
+    // No inputs, system subjects only to random perturbation
+    u = u.zeros(); 
+    
+    // Initial state covariance
+    mat P0(5,5);
+    P0 = 10 * P0.eye();
+
+    // Initialize KF for generating measurements
     KF kalman;
     kalman.InitSystem(A, B, H, Q, R);
+    kalman.InitSystemState(x0);
+    kalman.InitStateCovariance(P0);
+
+    // Initialize KF for doing the filtering
+    KF filter;
+    filter.InitSystem(A, B, H, Q, R);
+    filter.InitSystemState(x0);
+    filter.InitStateCovariance(P0);
   
+    // Generate measurements first
     for (int k = 0; k < 100; k++) {
       kalman.Kalmanf(u);
-      
-      colvec *x = kalman.GetCurrentState();
       colvec *z = kalman.GetCurrentOutput();
+      meas_file << k << ' ' << z->at(0,0) << ' ' << z->at(1,0) << '\n';
+
+      // Put the z_measurment to the Kalman filter
+      filter.Kalmanf(*z, u);
       colvec *x_m = kalman.GetCurrentEstimatedState();
-      log_file << k << '\t' << z->at(0,0) << '\t' << x->at(0,0) << '\t' << x_m->at(0,0) << '\n';      
+      log_file << k << ' ' << x_m->at(0,0) << ' ' << x_m->at(1,0) << '\n';
     }
-    
+
+    meas_file.close();
     log_file.close();
     
     return 0;
