@@ -20,7 +20,6 @@ int main(int argc, char** argv)
      */
     ofstream log_file;
     ofstream meas_file;
-    ifstream meas;
 #ifdef _WIN32
     log_file.open("..\\bin\\output_test_kf.txt");
     meas_file.open("..\\bin\\meas_test_kf.txt");
