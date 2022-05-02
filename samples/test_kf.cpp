@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     ofstream meas_file;
     ifstream meas;
 #ifdef _WIN32
-    log_file.open("..\\bin\\log_file_test.txt");
+    log_file.open("..\\bin\\output_test_kf.txt");
     meas_file.open("..\\bin\\meas_test_kf.txt");
 #else
     log_file.open("log_file1.txt");
@@ -50,9 +50,10 @@ int main(int argc, char** argv)
       << (1/2.0) <<       0 <<       1 <<       0 << 0 << endr
       <<       0 << (1/2.0) <<       0 <<       1 << 0 << endr
       <<       0 <<       0 <<       0 <<       0 << 0 << endr;
-      
+    Q = 1e-3 * Q;
+
     // Measusrement noise
-    R = 10 * R.eye();
+    R = 9 * R.eye();
     
     // Initial state
     colvec x0(5);
